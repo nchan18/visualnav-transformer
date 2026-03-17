@@ -1,5 +1,4 @@
 import numpy as np
-import yaml
 from typing import Tuple
 
 # ROS 2
@@ -15,13 +14,10 @@ from nomad_nav.topic_names import (
 from nomad_nav.ros_data import ROSData
 
 # CONSTS
-CONFIG_PATH = "../config/robot.yaml"
-with open(CONFIG_PATH, "r") as f:
-	robot_config = yaml.safe_load(f)
-MAX_V = robot_config["max_v"]
-MAX_W = robot_config["max_w"]
-VEL_TOPIC = robot_config["vel_navi_topic"]
-DT = 1/robot_config["frame_rate"]
+MAX_V = 0.22
+MAX_W = 0.4
+VEL_TOPIC = "/cmd_vel"
+DT = 1 / 60
 RATE = 9
 EPS = 1e-8
 WAYPOINT_TIMEOUT = 1 # seconds # TODO: tune this
@@ -79,7 +75,17 @@ def callback_reached_goal(reached_goal_msg: Bool):
 
 class PDControllerNode(Node):
     def __init__(self):
+        global MAX_V, MAX_W, VEL_TOPIC, DT
         super().__init__('pd_controller')
+        self.declare_parameter("max_v", MAX_V)
+        self.declare_parameter("max_w", MAX_W)
+        self.declare_parameter("frame_rate", 60.0)
+        self.declare_parameter("vel_navi_topic", VEL_TOPIC)
+        MAX_V = self.get_parameter("max_v").get_parameter_value().double_value
+        MAX_W = self.get_parameter("max_w").get_parameter_value().double_value
+        frame_rate = self.get_parameter("frame_rate").get_parameter_value().double_value
+        VEL_TOPIC = self.get_parameter("vel_navi_topic").get_parameter_value().string_value
+        DT = 1 / frame_rate
         self.declare_parameter("waypoint_topic", WAYPOINT_TOPIC)
         self.declare_parameter("reached_goal_topic", REACHED_GOAL_TOPIC)
         self.declare_parameter("cmd_vel_topic", VEL_TOPIC)
@@ -125,10 +131,10 @@ class PDControllerNode(Node):
             self.vel_out.publish(vel_msg)
 	
 def main(args=None):
-    rclpy.init(args=args)
+    rclpy.init(args=None)
     node = PDControllerNode()
     rclpy.spin(node)  # Keep the node running
     rclpy.shutdown()
 
 if __name__ == '__main__':
-	main()
+    main()

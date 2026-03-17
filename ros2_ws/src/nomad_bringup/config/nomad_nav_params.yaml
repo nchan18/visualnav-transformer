@@ -1,0 +1,18 @@
+navigate:
+  ros__parameters:
+    max_v: 0.22
+    max_w: 0.4
+    frame_rate: 60.0
+
+explore:
+  ros__parameters:
+    max_v: 0.22
+    max_w: 0.4
+    frame_rate: 60.0
+
+pd_controller:
+  ros__parameters:
+    max_v: 0.22
+    max_w: 0.4
+    frame_rate: 60.0
+    vel_navi_topic: /cmd_vel

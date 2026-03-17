@@ -62,6 +62,7 @@ def generate_launch_description():
     enable_teleop = LaunchConfiguration("enable_teleop")
     image_topic = LaunchConfiguration("image_topic")
     cmd_vel_topic = LaunchConfiguration("cmd_vel_topic")
+    nomad_params_file = LaunchConfiguration("nomad_params_file")
 
     declare_args = [
         DeclareLaunchArgument(
@@ -149,6 +150,11 @@ def generate_launch_description():
             default_value=str(defaults["teleop"]["enable_teleop"]).lower(),
             description="Start teleop_twist_keyboard node",
         ),
+        DeclareLaunchArgument(
+            "nomad_params_file",
+            default_value=os.path.join(package_share, "config", "nomad_nav_params.yaml"),
+            description="YAML file containing ROS parameters for nomad_nav nodes",
+        ),
     ]
 
     realsense_launch = IncludeLaunchDescription(
@@ -170,6 +176,7 @@ def generate_launch_description():
         output="screen",
         emulate_tty=True,
         parameters=[
+            nomad_params_file,
             {
                 "image_topic": image_topic,
                 "waypoint_topic": LaunchConfiguration("waypoint_topic"),
@@ -193,6 +200,7 @@ def generate_launch_description():
             "--num-samples",
             LaunchConfiguration("num_samples"),
         ],
+        remappings=[("/rgb", image_topic)],
     )
 
     pd_controller_node = Node(
@@ -201,11 +209,12 @@ def generate_launch_description():
         output="screen",
         emulate_tty=True,
         parameters=[
+            nomad_params_file,
             {
                 "waypoint_topic": LaunchConfiguration("waypoint_topic"),
                 "reached_goal_topic": LaunchConfiguration("reached_goal_topic"),
                 "cmd_vel_topic": cmd_vel_topic,
-            }
+            },
         ],
     )
 

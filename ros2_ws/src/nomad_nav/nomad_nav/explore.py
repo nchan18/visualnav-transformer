@@ -26,13 +26,7 @@ from nomad_nav.topic_names import (
 
 # CONSTANTS
 MODEL_WEIGHTS_PATH = "../model_weights"
-ROBOT_CONFIG_PATH ="../config/robot.yaml"
 MODEL_CONFIG_PATH = "../config/models.yaml"
-with open(ROBOT_CONFIG_PATH, "r") as f:
-    robot_config = yaml.safe_load(f)
-MAX_V = robot_config["max_v"]
-MAX_W = robot_config["max_w"]
-RATE = robot_config["frame_rate"] 
 
 # GLOBALS
 context_queue = []
@@ -46,17 +40,16 @@ class ExplorationNode(Node):
     def __init__(self, args: argparse.Namespace):
         super().__init__("exploration_node")
         self.args = args
-        self.declare_parameter("image_topic", IMAGE_TOPIC)
-        self.declare_parameter("waypoint_topic", WAYPOINT_TOPIC)
-        self.declare_parameter("sampled_actions_topic", SAMPLED_ACTIONS_TOPIC)
-        image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
-        waypoint_topic = self.get_parameter("waypoint_topic").get_parameter_value().string_value
-        sampled_actions_topic = self.get_parameter("sampled_actions_topic").get_parameter_value().string_value
-
-        self.image_sub = self.create_subscription(Image, image_topic, self.callback_obs, 10)
-        self.waypoint_pub = self.create_publisher(Float32MultiArray, waypoint_topic, 10)
-        self.sampled_actions_pub = self.create_publisher(Float32MultiArray, sampled_actions_topic, 10)
-        self.timer = self.create_timer(1 / RATE, self.timer_callback)
+        self.declare_parameter("max_v", 0.22)
+        self.declare_parameter("max_w", 0.4)
+        self.declare_parameter("frame_rate", 60.0)
+        self.max_v = self.get_parameter("max_v").get_parameter_value().double_value
+        self.max_w = self.get_parameter("max_w").get_parameter_value().double_value
+        self.rate = self.get_parameter("frame_rate").get_parameter_value().double_value
+        self.image_sub = self.create_subscription(Image, IMAGE_TOPIC, self.callback_obs, 10)
+        self.waypoint_pub = self.create_publisher(Float32MultiArray, WAYPOINT_TOPIC, 10)
+        self.sampled_actions_pub = self.create_publisher(Float32MultiArray, SAMPLED_ACTIONS_TOPIC, 10)
+        self.timer = self.create_timer(1 / self.rate, self.timer_callback)
 
     def callback_obs(self, msg):
         obs_img = msg_to_pil(msg)
@@ -124,7 +117,7 @@ class ExplorationNode(Node):
             chosen_waypoint = naction[self.args.waypoint]
 
             if model_params["normalize"]:
-                chosen_waypoint *= (MAX_V / RATE)
+                chosen_waypoint *= (self.max_v / self.rate)
 
             waypoint_msg = Float32MultiArray()
             waypoint_msg.data = chosen_waypoint.tolist()
