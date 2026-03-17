@@ -28,6 +28,9 @@ def _load_defaults(package_share_dir: str):
             "close_threshold": 3,
             "radius": 4,
             "num_samples": 8,
+            "waypoint_topic": "/waypoint",
+            "sampled_actions_topic": "/sampled_actions",
+            "reached_goal_topic": "/topoplan/reached_goal",
             "cmd_vel_topic": "/cmd_vel",
         },
         "teleop": {
@@ -52,7 +55,7 @@ def _load_defaults(package_share_dir: str):
 
 
 def generate_launch_description():
-    package_share = get_package_share_directory("nomad_nav")
+    package_share = get_package_share_directory("nomad_bringup")
     defaults = _load_defaults(package_share)
 
     use_realsense = LaunchConfiguration("use_realsense")
@@ -122,6 +125,21 @@ def generate_launch_description():
             description="Number of sampled actions for diffusion model",
         ),
         DeclareLaunchArgument(
+            "waypoint_topic",
+            default_value=str(defaults["navigation"]["waypoint_topic"]),
+            description="Waypoint topic for navigator/controller communication",
+        ),
+        DeclareLaunchArgument(
+            "sampled_actions_topic",
+            default_value=str(defaults["navigation"]["sampled_actions_topic"]),
+            description="Topic for sampled actions visualization/debug",
+        ),
+        DeclareLaunchArgument(
+            "reached_goal_topic",
+            default_value=str(defaults["navigation"]["reached_goal_topic"]),
+            description="Topic used to signal goal reached",
+        ),
+        DeclareLaunchArgument(
             "cmd_vel_topic",
             default_value=str(defaults["navigation"]["cmd_vel_topic"]),
             description="Velocity output topic",
@@ -151,6 +169,14 @@ def generate_launch_description():
         executable="navigate",
         output="screen",
         emulate_tty=True,
+        parameters=[
+            {
+                "image_topic": image_topic,
+                "waypoint_topic": LaunchConfiguration("waypoint_topic"),
+                "sampled_actions_topic": LaunchConfiguration("sampled_actions_topic"),
+                "reached_goal_topic": LaunchConfiguration("reached_goal_topic"),
+            }
+        ],
         arguments=[
             "--model",
             LaunchConfiguration("model"),
@@ -167,7 +193,6 @@ def generate_launch_description():
             "--num-samples",
             LaunchConfiguration("num_samples"),
         ],
-        remappings=[("/rgb", image_topic)],
     )
 
     pd_controller_node = Node(
@@ -175,7 +200,13 @@ def generate_launch_description():
         executable="pd_controller",
         output="screen",
         emulate_tty=True,
-        remappings=[("/cmd_vel", cmd_vel_topic)],
+        parameters=[
+            {
+                "waypoint_topic": LaunchConfiguration("waypoint_topic"),
+                "reached_goal_topic": LaunchConfiguration("reached_goal_topic"),
+                "cmd_vel_topic": cmd_vel_topic,
+            }
+        ],
     )
 
     teleop_node = Node(

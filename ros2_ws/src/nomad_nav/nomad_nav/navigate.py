@@ -12,7 +12,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import Bool, Float32MultiArray
-from utils import msg_to_pil, to_numpy, transform_images, load_model
+from nomad_nav.utils import msg_to_pil, to_numpy, transform_images, load_model
 
 from vint_train.training.train_utils import get_action
 import torch
@@ -23,9 +23,12 @@ import yaml
 import time
 
 # UTILS
-from topic_names import (IMAGE_TOPIC,
-                        WAYPOINT_TOPIC,
-                        SAMPLED_ACTIONS_TOPIC)
+from nomad_nav.topic_names import (
+    IMAGE_TOPIC,
+    WAYPOINT_TOPIC,
+    SAMPLED_ACTIONS_TOPIC,
+    REACHED_GOAL_TOPIC,
+)
 
 # CONSTANTS
 TOPOMAP_IMAGES_DIR = "../topomaps/images"
@@ -51,10 +54,19 @@ class NavigationNode(Node):
     def __init__(self, args: argparse.Namespace):
         super().__init__("navigation_node")
         self.args = args
-        self.image_sub = self.create_subscription(Image, IMAGE_TOPIC, self.callback_obs, 10)
-        self.waypoint_pub = self.create_publisher(Float32MultiArray, WAYPOINT_TOPIC, 10)
-        self.sampled_actions_pub = self.create_publisher(Float32MultiArray, SAMPLED_ACTIONS_TOPIC, 10)
-        self.goal_pub = self.create_publisher(Bool, "/topoplan/reached_goal", 10)
+        self.declare_parameter("image_topic", IMAGE_TOPIC)
+        self.declare_parameter("waypoint_topic", WAYPOINT_TOPIC)
+        self.declare_parameter("sampled_actions_topic", SAMPLED_ACTIONS_TOPIC)
+        self.declare_parameter("reached_goal_topic", REACHED_GOAL_TOPIC)
+        image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
+        waypoint_topic = self.get_parameter("waypoint_topic").get_parameter_value().string_value
+        sampled_actions_topic = self.get_parameter("sampled_actions_topic").get_parameter_value().string_value
+        reached_goal_topic = self.get_parameter("reached_goal_topic").get_parameter_value().string_value
+
+        self.image_sub = self.create_subscription(Image, image_topic, self.callback_obs, 10)
+        self.waypoint_pub = self.create_publisher(Float32MultiArray, waypoint_topic, 10)
+        self.sampled_actions_pub = self.create_publisher(Float32MultiArray, sampled_actions_topic, 10)
+        self.goal_pub = self.create_publisher(Bool, reached_goal_topic, 10)
         self.timer = self.create_timer(1 / RATE, self.timer_callback)
         self.reached_goal = False
 

@@ -1,6 +1,6 @@
 import argparse
 import os
-from utils import msg_to_pil 
+from nomad_nav.utils import msg_to_pil
 import time
 
 # ROS2
@@ -8,7 +8,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from topic_names import IMAGE_TOPIC
+from nomad_nav.topic_names import IMAGE_TOPIC
 
 TOPOMAP_IMAGES_DIR = "../topomaps/images"
 obs_img = None
@@ -29,6 +29,8 @@ def remove_files_in_dir(dir_path: str):
 class TopomapCreatorNode(Node):
     def __init__(self, dir_path: str, dt: float):
         super().__init__('create_topomap')
+        self.declare_parameter("image_topic", IMAGE_TOPIC)
+        image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
         self.dir_path = dir_path
         self.dt = dt
         self.obs_img = None
@@ -36,12 +38,13 @@ class TopomapCreatorNode(Node):
         self.start_time = float("inf")
 
         # Subscriber to image topic
-        self.create_subscription(Image, IMAGE_TOPIC, self.callback_obs, 10)
+        self.create_subscription(Image, image_topic, self.callback_obs, 10)
         # Publisher to subgoal topic
         self.subgoals_pub = self.create_publisher(Image, '/subgoals', 10)
 
         # Timer to check for inactivity
         self.create_timer(self.dt, self.timer_callback)
+        self.image_topic = image_topic
 
         self.topomap_name_dir = os.path.join(TOPOMAP_IMAGES_DIR, self.dir_path)
         if not os.path.isdir(self.topomap_name_dir):
@@ -64,7 +67,7 @@ class TopomapCreatorNode(Node):
             self.obs_img = None
 
         if time.time() - self.start_time > 2 * self.dt:
-            self.get_logger().warning(f"Topic {IMAGE_TOPIC} not publishing anymore. Shutting down...")
+            self.get_logger().warning(f"Topic {self.image_topic} not publishing anymore. Shutting down...")
             rclpy.shutdown()
 
 

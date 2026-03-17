@@ -14,12 +14,14 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float32MultiArray
-from utils import msg_to_pil, to_numpy, transform_images, load_model
+from nomad_nav.utils import msg_to_pil, to_numpy, transform_images, load_model
 
 # UTILS
-from topic_names import (IMAGE_TOPIC,
-                        WAYPOINT_TOPIC,
-                        SAMPLED_ACTIONS_TOPIC)
+from nomad_nav.topic_names import (
+    IMAGE_TOPIC,
+    WAYPOINT_TOPIC,
+    SAMPLED_ACTIONS_TOPIC,
+)
 
 
 # CONSTANTS
@@ -44,9 +46,16 @@ class ExplorationNode(Node):
     def __init__(self, args: argparse.Namespace):
         super().__init__("exploration_node")
         self.args = args
-        self.image_sub = self.create_subscription(Image, IMAGE_TOPIC, self.callback_obs, 10)
-        self.waypoint_pub = self.create_publisher(Float32MultiArray, WAYPOINT_TOPIC, 10)
-        self.sampled_actions_pub = self.create_publisher(Float32MultiArray, SAMPLED_ACTIONS_TOPIC, 10)
+        self.declare_parameter("image_topic", IMAGE_TOPIC)
+        self.declare_parameter("waypoint_topic", WAYPOINT_TOPIC)
+        self.declare_parameter("sampled_actions_topic", SAMPLED_ACTIONS_TOPIC)
+        image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
+        waypoint_topic = self.get_parameter("waypoint_topic").get_parameter_value().string_value
+        sampled_actions_topic = self.get_parameter("sampled_actions_topic").get_parameter_value().string_value
+
+        self.image_sub = self.create_subscription(Image, image_topic, self.callback_obs, 10)
+        self.waypoint_pub = self.create_publisher(Float32MultiArray, waypoint_topic, 10)
+        self.sampled_actions_pub = self.create_publisher(Float32MultiArray, sampled_actions_topic, 10)
         self.timer = self.create_timer(1 / RATE, self.timer_callback)
 
     def callback_obs(self, msg):

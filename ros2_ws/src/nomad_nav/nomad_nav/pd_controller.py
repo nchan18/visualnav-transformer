@@ -8,10 +8,11 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Float32MultiArray, Bool
 
-from topic_names import (WAYPOINT_TOPIC, 
-			 			REACHED_GOAL_TOPIC)
-from ros_data import ROSData
-from utils import clip_angle
+from nomad_nav.topic_names import (
+    WAYPOINT_TOPIC,
+    REACHED_GOAL_TOPIC,
+)
+from nomad_nav.ros_data import ROSData
 
 # CONSTS
 CONFIG_PATH = "../config/robot.yaml"
@@ -79,21 +80,27 @@ def callback_reached_goal(reached_goal_msg: Bool):
 class PDControllerNode(Node):
     def __init__(self):
         super().__init__('pd_controller')
+        self.declare_parameter("waypoint_topic", WAYPOINT_TOPIC)
+        self.declare_parameter("reached_goal_topic", REACHED_GOAL_TOPIC)
+        self.declare_parameter("cmd_vel_topic", VEL_TOPIC)
+        waypoint_topic = self.get_parameter("waypoint_topic").get_parameter_value().string_value
+        reached_goal_topic = self.get_parameter("reached_goal_topic").get_parameter_value().string_value
+        cmd_vel_topic = self.get_parameter("cmd_vel_topic").get_parameter_value().string_value
         # Subscribers
         self.waypoint_sub = self.create_subscription(
             Float32MultiArray,
-            WAYPOINT_TOPIC,
+            waypoint_topic,
             callback_drive,
             10  # Queue size
         )
         self.reached_goal_sub = self.create_subscription(
             Bool,
-            REACHED_GOAL_TOPIC,
+            reached_goal_topic,
             callback_reached_goal,
             10  # Queue size
         )
         # Publisher
-        self.vel_out = self.create_publisher(Twist, VEL_TOPIC, 10)
+        self.vel_out = self.create_publisher(Twist, cmd_vel_topic, 10)
         print('Created cmd vel publisher')
         # Timer for periodic execution (using ROS 2 timer)
         self.create_timer(1.0 / RATE, self.timer_callback)
