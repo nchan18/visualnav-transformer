@@ -1,0 +1,20 @@
+camera:
+  use_realsense: true
+  camera_name: camera
+  image_topic: /camera/color/image_raw
+  enable_depth: false
+  color_profile: 640x480x30
+
+navigation:
+  model: nomad
+  topomap_dir: topomap
+  goal_node: -1
+  waypoint: 2
+  close_threshold: 3
+  radius: 4
+  num_samples: 8
+  cmd_vel_topic: /cmd_vel
+
+teleop:
+  enable_teleop: false
+  cmd_vel_topic: /cmd_vel
